@@ -33,7 +33,7 @@ def update_dataset(coin):
         with open("dataset/bars/"+ coin + ".json", "r") as read_file:
             data = json.load(read_file)
         now_time = int(time.time())
-        start_time = int(data[-1]['open_time'] + 60)*1000
+        start_time = int(data[-1]['open_time'] + 5*60)*1000
         end_time = int(((now_time) // 60)*60)*1000
 
         if(end_time - start_time > int(60*60*24*settings['chart_days'])):

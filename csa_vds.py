@@ -52,6 +52,7 @@ def search_coin_level_cascade(coin):
     ext_data = {
             'high_array': high_array,
             'low_array': low_array,
+            'was_sent': False
     }
     path_ext = 'ext_data/' + str(coin) + '_ext.json'
 
@@ -62,15 +63,19 @@ def search_coin_level_cascade(coin):
     # загружаем прошлые эксремумы 
     with open(path_ext, "r") as read_file:
         last_ext_data = json.load(read_file)
-    if not(ext_data == last_ext_data):
-
+    if ( (ext_data['high_array'] != last_ext_data['high_array'] or ext_data['low_array'] != last_ext_data['low_array']) or ((ext_data['high_array'] == last_ext_data['high_array'] and ext_data['low_array'] == last_ext_data['low_array']) and not(last_ext_data['was_sent']))  ): # Проверяем на каскад если изменилось или если неизменилось, но не было отправлено 
+        if((ext_data['high_array'] != last_ext_data['high_array'] or ext_data['low_array'] != last_ext_data['low_array'])):
+            print('%s изменение дата сета' %(coin))
         current_price = data[-1]['close']
         if(len(ext_data['high_array']) >= 2 and len(ext_data['low_array']) >= 2):
             # каскад сверху
             if(abs(current_price - ext_data['high_array'][1]) < abs(current_price - ext_data['low_array'][1]) and abs(current_price - ext_data['high_array'][1]) < abs(current_price - ext_data['low_array'][1]) ):
                 drow_bars_and_send_telegram(data,coin,"%s Каскад сверху" %(coin))
+                ext_data['was_sent'] = True
+                 
             if(abs(current_price - ext_data['low_array'][1]) < abs(current_price - ext_data['high_array'][1]) and abs(current_price - ext_data['low_array'][1]) < abs(current_price - ext_data['high_array'][1]) ):
                 drow_bars_and_send_telegram(data,coin,"%s Каскад сверху" %(coin))
+                ext_data['was_sent'] = True
         with open(path_ext, "w") as write_file:
             json.dump(ext_data, write_file,indent=4)
 
