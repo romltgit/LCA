@@ -102,7 +102,7 @@ def drow_bars_and_send_telegram(data,coin,ext_data,text):
         text = '%s %s Каскад уровней сверху:\n' %(surrogates.decode('\ud83d\udfe2'),coin)
 
         for high in ext_data_copy['high_array']:
-            text = "{} \n {} (-{}%)".format(text,low,str(round(abs(high/data_copy[-1]['close'] - 1)*100,2)))
+            text = "{} \n {} (+{}%)".format(text,high,str(round(abs(high/data_copy[-1]['close'] - 1)*100,2)))
 
 
     elif(text == 'short'):
