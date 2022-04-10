@@ -11,7 +11,7 @@ import os.path
 import plotly.graph_objects as go
 import plotly as plotly
 import plotly.express as px
-
+import copy
 import telebot
 
 # Инициализация Телеграм-бота
@@ -94,7 +94,23 @@ def update_dataset(coin):
         return data
     
 
-def drow_bars_and_send_telegram(data,coin,text):
+def drow_bars_and_send_telegram(data,coin,ext_data,text):
+    ext_data_copy = copy.deepcopy(ext_data)
+    data_copy = copy.deepcopy(data)
+
+    if(text == 'long'):
+        text = '%s %s Каскад уровней сверху:\n' %(surrogates.decode('\ud83d\udfe2'),coin)
+
+        for high in ext_data_copy['high_array']:
+            text = "{} \n {} (-{}%)".format(text,low,str(round(abs(high/data_copy[-1]['close'] - 1)*100,2)))
+
+
+    elif(text == 'short'):
+        text = '%s %s Каскад уровней снизу:\n' %(surrogates.decode('\ud83d\udd34'),coin)
+
+        for low in ext_data_copy['low_array']:
+            text = "{} \n {} (-{}%)".format(text,low,str(round(abs(low/data_copy[-1]['close'] - 1)*100,2)))
+
     df = pd.DataFrame(data) 
     fig = go.Figure(data=[go.Candlestick(
         x=df['open_time_date'],
@@ -107,9 +123,20 @@ def drow_bars_and_send_telegram(data,coin,text):
         )]
     )
     fig.update_layout(xaxis_rangeslider_visible=False,showlegend=False)
+    current_x_array  = []
+    for bar in reversed(data_copy):
+        current_x_array.append(bar['open_time_date'])
+        if(bar['high'] in ext_data_copy['high_array']):
+            fig.add_trace(go.Scatter(x=current_x_array, y=[bar['high'] for j in current_x_array], mode ="lines",line=dict(color="#B22222")))
+            ext_data_copy['high_array'].remove(bar['high'])
+        if(bar['low'] in ext_data_copy['low_array']):
+            fig.add_trace(go.Scatter(x=current_x_array, y=[bar['low'] for j in current_x_array], mode ="lines",line=dict(color="#228B22")))
+            ext_data_copy['low_array'].remove(bar['low'])
 
     img = 'images/' + coin + '.png'
     fig.write_image(img)
     fig.data = []
     fig.layout = {}
+    
+
     send_telegram(text,img)

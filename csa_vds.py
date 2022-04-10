@@ -7,26 +7,28 @@ import telebot
 import plotly.graph_objects as go
 import threading
 last_minute = -1
+
 coin_list = [
  'ETHUSDT','ALICEUSDT','BTCUSDT','SOLUSDT',
  'FTMUSDT','BNBUSDT','AVAXUSDT','NEARUSDT','LUNAUSDT',
  'XRPUSDT','DOTUSDT'
 ]
 def search_coin_level_cascade(coin):
+
     global settings
-    data = update_dataset(coin)
-    high_array = []
-    low_array = []
-    last_high = data[-1]['high']
-    last_low = data[-1]['low']
-    #поиск хаев
-    bar = len(data) -1 - settings['search_radius']
-    while bar >=0:
+    data = update_dataset(coin)     # обновляем датасет 
+    high_array = []     # Массив хаев
+    low_array = []     # Массив лоев 
+    last_high = data[-1]['high']     # Последний хай
+    last_low = data[-1]['low']     # Последний лой
+    bar = len(data)-1   # Поиск начинаеться с конца датасета
+
+    while (bar >=0 and ((len(high_array) <4 and len(low_array) <4)  or  len(high_array) < 2  or len(low_array) < 2) ):     # 
         # поиск хаев
         if(data[bar]['high'] > last_high):
             last_high = data[bar]['high']
 
-            if(bar >= settings['search_radius']):
+            if(bar >= settings['search_radius'] and bar <= len(data) -1 - settings['search_radius']):
                 local_bars = data[bar - settings['search_radius']:bar + settings['search_radius']+1]
                 local_ext = True
                 for local_bar in local_bars:
@@ -38,7 +40,8 @@ def search_coin_level_cascade(coin):
         # поиск лоев
         if(data[bar]['low'] < last_low):
             last_low = data[bar]['low']
-            if(bar >= settings['search_radius']):
+
+            if(bar >= settings['search_radius'] and bar <= len(data) -1 - settings['search_radius']):
                 local_bars = data[bar - settings['search_radius']:bar + settings['search_radius']+1]
                 local_ext = True
                 for local_bar in local_bars:
@@ -48,6 +51,8 @@ def search_coin_level_cascade(coin):
                 if(local_ext):
                     low_array.append(last_low)
         bar = bar - 1
+
+    data=data[bar-10:len(data)]
 
     ext_data = {
             'high_array': high_array,
@@ -60,25 +65,30 @@ def search_coin_level_cascade(coin):
         with open(path_ext, "w") as write_file:
             json.dump(ext_data, write_file,indent=4)
 
-    # загружаем прошлые эксремумы 
+    # загружаем прошлые массивы экстремумов 
     with open(path_ext, "r") as read_file:
-        last_ext_data = json.load(read_file)
-    if ( (ext_data['high_array'] != last_ext_data['high_array'] or ext_data['low_array'] != last_ext_data['low_array']) or ((ext_data['high_array'] == last_ext_data['high_array'] and ext_data['low_array'] == last_ext_data['low_array']) and not(last_ext_data['was_sent']))  ): # Проверяем на каскад если изменилось или если неизменилось, но не было отправлено 
-        if((ext_data['high_array'] != last_ext_data['high_array'] or ext_data['low_array'] != last_ext_data['low_array'])):
-            print('%s изменение дата сета' %(coin))
+        previous_extremums_array = json.load(read_file)
+
+    extremums_array_changed = (ext_data['high_array'] != previous_extremums_array['high_array'] or ext_data['low_array'] != previous_extremums_array['low_array'])    # Изменились ли массивы экстремумов
+
+    if ( extremums_array_changed or (not(extremums_array_changed) and not(previous_extremums_array['was_sent'])) ): # Проверяем на каскад если изменились массивы экстремумов либо они не изменились, но не было сигнала в прошлый раз
+
         current_price = data[-1]['close']
-        if(len(ext_data['high_array']) >= 2 and len(ext_data['low_array']) >= 2):
-            # каскад сверху
-            if(abs(current_price - ext_data['high_array'][1]) < abs(current_price - ext_data['low_array'][1]) and abs(current_price - ext_data['high_array'][1]) < abs(current_price - ext_data['low_array'][1]) ):
-                drow_bars_and_send_telegram(data,coin,"%s Каскад сверху" %(coin))
+
+        # Если до 3 экстремом вверх ближе чем до 2х вниз, то сигнал в лонг
+        if(len(ext_data['high_array']) >= 3):
+            if(abs(current_price - ext_data['high_array'][2]) < abs(current_price - ext_data['low_array'][1]) ):
+                drow_bars_and_send_telegram(data,coin,ext_data,"long")
                 ext_data['was_sent'] = True
-                 
-            if(abs(current_price - ext_data['low_array'][1]) < abs(current_price - ext_data['high_array'][1]) and abs(current_price - ext_data['low_array'][1]) < abs(current_price - ext_data['high_array'][1]) ):
-                drow_bars_and_send_telegram(data,coin,"%s Каскад сверху" %(coin))
+
+        # Если до 3 экстремом вниз ближе чем до 2х вверх, то сигнал в шорт
+        if(len(ext_data['low_array']) >= 3):  
+            if(abs(current_price - ext_data['low_array'][2]) < abs(current_price - ext_data['high_array'][1]) ):
+                drow_bars_and_send_telegram(data,coin,ext_data,"short")
                 ext_data['was_sent'] = True
+        
         with open(path_ext, "w") as write_file:
             json.dump(ext_data, write_file,indent=4)
-
 
 while(True):
     now = datetime.datetime.now()
@@ -99,9 +109,6 @@ while(True):
             # Ждем завершения работы всех потоков этой итерации
         for t in threads:
             t.join()
-           
-            
     last_minute = minute
-    time.sleep(1)
     
 
