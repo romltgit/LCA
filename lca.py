@@ -91,15 +91,15 @@ def search_coin_level_cascade(coin):
     
         current_price = data[-1]['close']   # Текущая цена тикера
 
-        # Если до 3 экстремом вверх ближе чем до 2х вниз, то сигнал в лонг
+        # Если до 3х экстремумов вверх ближе чем до 2х вниз, то сигнал в лонг
         if(len(ext_data['high_array']) >= 3 and len(ext_data['low_array']) >= 2):
-            if(abs(current_price - ext_data['high_array'][1]) < abs(current_price - ext_data['low_array'][1]) ):
+            if(abs(current_price - ext_data['high_array'][2]) < abs(current_price - ext_data['low_array'][1]) ):
                 drow_bars_and_send_telegram(data,coin,ext_data,"long")
                 ext_data['was_sent'] = True
 
-        # Если до 3 экстремом вниз ближе чем до 2х вверх, то сигнал в шорт
+        # Если до 3х экстремумов вниз ближе чем до 2х вверх, то сигнал в шорт
         if(len(ext_data['low_array']) >= 3 and len(ext_data['high_array']) >= 2):  
-            if(abs(current_price - ext_data['low_array'][1]) < abs(current_price - ext_data['high_array'][1]) ):
+            if(abs(current_price - ext_data['low_array'][2]) < abs(current_price - ext_data['high_array'][1]) ):
                 drow_bars_and_send_telegram(data,coin,ext_data,"short")
                 ext_data['was_sent'] = True
         
