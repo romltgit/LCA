@@ -1,0 +1,7 @@
+numpy==1.22.3
+pandas==1.4.1
+plotly==5.6.0
+kaleido==0.2.1
+python-binance==1.0.12
+surrogates==1.0.2
+pyTelegramBotAPI==4.4.0
